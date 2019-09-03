@@ -58,15 +58,6 @@ Mappings:
 
 
 Resources:
-  # JenkinsMasterConfigEFS:
-  #   Type: AWS::EFS::FileSystem
-  #   DeletionPolicy: Retain
-  #   Properties:
-  #     FileSystemTags:
-  #       - Key: Name
-  #         Value: JenkinsMasterConfig
-  #     PerformanceMode: generalPurpose
-
   JenkinsMasterConfigEFSMountTargetAZ1:
     Type: AWS::EFS::MountTarget
     Properties:
@@ -87,7 +78,6 @@ Resources:
         Fn::ImportValue:
           !Sub "${EnvironmentName}-PRI2-SN"
 
-
   JenkinsMasterSecGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -99,6 +89,10 @@ Resources:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
           CidrIp: 0.0.0.0/0
 
   EFSSecGroup:
@@ -116,40 +110,50 @@ Resources:
             Fn::ImportValue:
               !Sub "${EnvironmentName}-VPC-CIDR"
 
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - UdacityS3ReadOnlyEC2
+
   JenkinsMasterLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Metadata:
+      AWS::CloudFormation::Authentication:
+        S3AccessCreds:
+          type: S3
+          roleName: UdacityS3ReadOnlyEC2
       AWS::CloudFormation::Init:
         configSets:
           MountConfig:
             - setup
-            - mount
         setup:
           files:
-            /tmp/setup_nfs:
+            /tmp/playbook_configure_jenkins_master.yml:
+              source: "https://udacity-cloudformation-project-yacine.s3.amazonaws.com/playbook_configure_jenkins_master.yml"
+              mode: "000644"
+              owner: "root"
+              group: "root"
+              authentication: S3AccessCreds
+            /tmp/setup_ansible:
               content: !Sub |
                 #!/bin/bash -xe
                 apt-get update
-                apt-get install -y nfs-common
+                apt-get install -y software-properties-common
+                apt-add-repository --yes --update ppa:ansible/ansible
+                apt-get install -y ansible
+                echo "localhost ansible_connection=local" > /etc/ansible/hosts
               mode: "000500"
               owner: "root"
               group: "root"
           commands:
-            01_install_nfs_utilities:
+            01_install_ansible:
               command:
-                "/tmp/setup_nfs > /var/log/setup_nfs_utils.log 2>&1"
-            02_create_mount_dir:
+                "/tmp/setup_ansible > /var/log/setup_ansible.log 2>&1"
+            02_run_ansible_playbook:
               command:
-                !Sub "mkdir -p ${MountPoint}"
-        mount:
-          commands:
-            01_mount:
-              command:
-                !Sub "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${JenkinsMasterConfigEFS}.efs.${AWS::Region}.amazonaws.com:/ /${MountPoint}"
-            02_permissions:
-              command:
-                !Sub "chown ubuntu:ubuntu ${MountPoint}"
-
+                !Sub "ansible-playbook /tmp/playbook_configure_jenkins_master.yml --extra-vars \"efs_file_system_id=${JenkinsMasterConfigEFS} aws_region=${AWS::Region}\" > /var/log/playbook_configure_jenkins_master.log 2>&1"
 
     Properties:
       ImageId: !FindInMap [ AWSRegionArch2AMI, !Ref 'AWS::Region' , !FindInMap [ AWSInstanceType2Arch, !Ref JenkinsMasterInstanceType, Arch ] ]
@@ -157,6 +161,7 @@ Resources:
       SecurityGroups:
         - !Ref JenkinsMasterSecGroup
       InstanceType: !Ref JenkinsMasterInstanceType
+      IamInstanceProfile: !Ref InstanceProfile
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash -xe
@@ -183,255 +188,4 @@ Resources:
       MinSize: 1
       MaxSize: 1
 
-#   LoadBalencerSecGroup:
-#     Type: AWS::EC2::SecurityGroup
-#     Properties:
-#       GroupDescription: Allow http to our load balancer
-#       VpcId:
-#         Fn::ImportValue:
-#           !Sub "${EnvironmentName}-VPCID"
-#       SecurityGroupIngress:
-#         - IpProtocol: tcp
-#           FromPort: 80
-#           ToPort: 80
-#           CidrIp: 0.0.0.0/0
-#       SecurityGroupEgress:
-#         - IpProtocol: tcp
-#           FromPort: 80
-#           ToPort: 80
-#           CidrIp: 0.0.0.0/0
 
-
-#   WebServerSecGroup:
-#     Type: AWS::EC2::SecurityGroup
-#     Properties:
-#       GroupDescription: Allowing access to port 80
-#       VpcId:
-#         Fn::ImportValue:
-#           !Sub "${EnvironmentName}-VPCID"
-#       SecurityGroupIngress:
-#         - IpProtocol: tcp
-#           FromPort: 80
-#           ToPort: 80
-#           CidrIp: 0.0.0.0/0
-#         - IpProtocol: tcp
-#           FromPort: 22
-#           ToPort: 22
-#           CidrIp:
-#             # Allows access only for servers within the VPC
-#             Fn::ImportValue: !Sub "${EnvironmentName}-VPC-CIDR"
-#       SecurityGroupEgress:
-#         - IpProtocol: tcp
-#           FromPort: 0
-#           ToPort: 65535
-#           CidrIp: 0.0.0.0/0
-
-#   BastionHostSecGroup:
-#     Type: AWS::EC2::SecurityGroup
-#     Properties:
-#       GroupDescription: Allowing access to port 22 for ssh
-#       VpcId:
-#         Fn::ImportValue:
-#           !Sub "${EnvironmentName}-VPCID"
-#       SecurityGroupIngress:
-#         - IpProtocol: tcp
-#           FromPort: 22
-#           ToPort: 22
-#           # should reduce to only my personal ip
-#           # but for demo purposes I am leaving this open from everywhere
-#           CidrIp: 0.0.0.0/0
-#       SecurityGroupEgress:
-#         - IpProtocol: tcp
-#           FromPort: 22
-#           ToPort: 22
-#           CidrIp:
-#             # Allows access only for servers within the VPC
-#             Fn::ImportValue: !Sub "${EnvironmentName}-VPC-CIDR"
-#   InstanceProfile:
-#     Type: AWS::IAM::InstanceProfile
-#     Properties:
-#       Path: "/"
-#       Roles:
-#         - UdacityS3ReadOnlyEC2
-
-#   BastionHostLaunchConfig:
-#     Type: AWS::AutoScaling::LaunchConfiguration
-#     Properties:
-#       ImageId: !FindInMap [ AWSRegionArch2AMI, !Ref 'AWS::Region' , !FindInMap [ AWSInstanceType2Arch, !Ref BastionInstanceType, Arch ] ]
-#       KeyName: !Ref KeyName
-#       SecurityGroups:
-#         - !Ref BastionHostSecGroup
-#       InstanceType: !Ref BastionInstanceType
-
-#   WebAppLaunchConfig:
-#     Type: AWS::AutoScaling::LaunchConfiguration
-#     Metadata:
-#       AWS::CloudFormation::Authentication:
-#         S3AccessCreds:
-#           type: S3
-#           roleName: UdacityS3ReadOnlyEC2
-#       AWS::CloudFormation::Init:
-#         configSets:
-#           Deploy: "Deploy"
-#         Deploy:
-#           files:
-#             /tmp/playbook_configure_server.yml:
-#               source: "https://udacity-cloudformation-project-yacine.s3.amazonaws.com/playbook_configure_server.yml"
-#               mode: "000644"
-#               owner: "root"
-#               group: "root"
-#               authentication: S3AccessCreds
-#             /tmp/udacity.zip:
-#                 source: "https://udacity-cloudformation-project-yacine.s3.amazonaws.com/udacity.zip"
-#                 mode: "000644"
-#                 owner: "root"
-#                 group: "root"
-#                 authentication: S3AccessCreds
-#             /tmp/setup_ansible:
-#               content: !Sub |
-#                 #!/bin/bash -xe
-#                 apt-get update
-#                 apt-get install -y software-properties-common
-#                 apt-add-repository --yes --update ppa:ansible/ansible
-#                 apt-get install -y ansible
-#                 echo "localhost ansible_connection=local" > /etc/ansible/hosts
-#               mode: "000500"
-#               owner: "root"
-#               group: "root"
-#             /tmp/setup_webapp:
-#               content: !Sub |
-#                 #!/bin/bash -xe
-#                 mkdir -p /var/www/html
-#                 unzip /tmp/udacity.zip -d /var/www/html
-#               mode: "000500"
-#               owner: "root"
-#               group: "root"
-#           commands:
-#             00_configureAnsible:
-#               command:
-#                 "/tmp/setup_ansible > /var/log/setup_ansible.log 2>&1"
-#             01_installDocker:
-#               command:
-#                 "ansible-playbook /tmp/playbook_configure_server.yml > /var/log/setup_ansiblePlaybook.log 2>&1"
-#             02_setupWebApp:
-#               command:
-#                 "/tmp/setup_webapp > /var/log/setup_webapp.log 2>&1"
-#             03_runDocker:
-#               command:
-#                 "docker run -d -p 80:80 -v /var/www/html:/var/www/html php:apache"
-#     Properties:
-#       UserData:
-#         Fn::Base64: !Sub |
-#           #!/bin/bash -xe
-#           apt-get update
-#           apt-get -y install python-pip
-#           pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
-#           /usr/local/bin/cfn-init -v \
-#             --stack ${AWS::StackName} \
-#             --resource WebAppLaunchConfig \
-#             --configsets Deploy \
-#             --region ${AWS::Region}
-#           /usr/local/bin/cfn-signal -e $? \
-#             --stack ${AWS::StackName} \
-#             --resource WebAppGroup \
-#             --region ${AWS::Region}
-#       ImageId: !FindInMap [ AWSRegionArch2AMI, !Ref 'AWS::Region' , !FindInMap [ AWSInstanceType2Arch, !Ref WebServerInstanceType, Arch ] ]
-#       # keyName is Needed for the Bastion host which will be connecting via ssh-agent forwarding
-#       KeyName: !Ref KeyName
-#       SecurityGroups:
-#         - !Ref WebServerSecGroup
-#       IamInstanceProfile: !Ref InstanceProfile
-#       InstanceType: !Ref WebServerInstanceType
-#       BlockDeviceMappings:
-#         - DeviceName: "/dev/sdk"
-#           Ebs:
-#             VolumeSize: '10'
-
-#   WebAppGroup:
-#     Type: AWS::AutoScaling::AutoScalingGroup
-#     Properties:
-#       VPCZoneIdentifier:
-#         - Fn::ImportValue: !Sub "${EnvironmentName}-PRIV-NETS"
-#       LaunchConfigurationName:
-#         !Ref WebAppLaunchConfig
-#       MinSize: 1
-#       MaxSize: 4
-#       DesiredCapacity: 1
-#       TargetGroupARNs:
-#         - !Ref WebAppTargetGroup
-#     CreationPolicy:
-#       ResourceSignal:
-#         Timeout: PT5M
-#     UpdatePolicy:
-#       AutoScalingRollingUpdate:
-#         MinInstancesInService: "1"
-#         MaxBatchSize: "1"
-#         PauseTime: "PT5M"
-#         WaitOnResourceSignals: "true"
-#         SuspendProcesses:
-#           - HealthCheck
-#           - ReplaceUnhealthy
-#           - AZRebalance
-#           - AlarmNotification
-#           - ScheduledActions
-
-#   BastionHostGroup:
-#     Type: AWS::AutoScaling::AutoScalingGroup
-#     Properties:
-#       VPCZoneIdentifier:
-#         - Fn::ImportValue: !Sub "${EnvironmentName}-PUB-NETS"
-#       LaunchConfigurationName:
-#         !Ref BastionHostLaunchConfig
-#       MinSize: 1
-#       MaxSize: 1
-
-#   WebAppLB:
-#     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-#     Properties:
-#       Subnets:
-#         - Fn::ImportValue: !Sub "${EnvironmentName}-PUB1-SN"
-#         - Fn::ImportValue: !Sub "${EnvironmentName}-PUB2-SN"
-#       SecurityGroups:
-#         - !Ref LoadBalencerSecGroup
-
-#   Listener:
-#     Type: AWS::ElasticLoadBalancingV2::Listener
-#     Properties:
-#       DefaultActions:
-#         - Type: forward
-#           TargetGroupArn: !Ref WebAppTargetGroup
-#       LoadBalancerArn:
-#         !Ref WebAppLB
-#       Port: '80'
-#       Protocol: HTTP
-#   ALBListenerRule:
-#     Type: AWS::ElasticLoadBalancingV2::ListenerRule
-#     Properties:
-#       Actions:
-#       - Type: forward
-#         TargetGroupArn: !Ref WebAppTargetGroup
-#       Conditions:
-#         - Field: path-pattern
-#           Values: [/]
-#       ListenerArn: !Ref Listener
-#       Priority: 1
-
-#   WebAppTargetGroup:
-#     Type: AWS::ElasticLoadBalancingV2::TargetGroup
-#     Properties:
-#       HealthCheckIntervalSeconds: 10
-#       HealthCheckPath: /
-#       HealthCheckProtocol: HTTP
-#       HealthCheckTimeoutSeconds: 8
-#       HealthyThresholdCount: 2
-#       Port: 80
-#       Protocol: HTTP
-#       UnhealthyThresholdCount: 5
-#       VpcId:
-#         Fn::ImportValue:
-#           !Sub "${EnvironmentName}-VPCID"
-
-# Outputs:
-#   LoadBalancerUrl:
-#     Description: The Url of the load balancer
-#     Value: !Sub "http://${WebAppLB.DNSName}"
