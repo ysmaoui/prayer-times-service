@@ -187,5 +187,20 @@ Resources:
         !Ref JenkinsMasterLaunchConfig
       MinSize: 1
       MaxSize: 1
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT5M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: "1"
+        MaxBatchSize: "1"
+        PauseTime: "PT5M"
+        WaitOnResourceSignals: "true"
+        SuspendProcesses:
+          - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
 
 
