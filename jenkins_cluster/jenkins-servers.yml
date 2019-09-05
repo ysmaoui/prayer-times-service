@@ -189,13 +189,13 @@ Resources:
       MaxSize: 1
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT5M
+        Timeout: PT10M
     UpdatePolicy:
       AutoScalingRollingUpdate:
-        MinInstancesInService: "1"
-        MaxBatchSize: "1"
-        PauseTime: "PT5M"
-        WaitOnResourceSignals: "true"
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT10M
+        WaitOnResourceSignals: true
         SuspendProcesses:
           - HealthCheck
           - ReplaceUnhealthy
