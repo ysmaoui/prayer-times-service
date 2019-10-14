@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Prayer Times</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style>
+    table {
+        font-family: arial, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    td, th {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+    }
+
+    tr:nth-child(even) {
+        background-color: #dddddd;
+    }
+
+    </style>
+
+
+</head>
+<body>
+   <div class="container-fluid">
+      <h1>Prayer times in Berlin for today</h1>
+      <table style="width:100%">
+            <tr>
+               <th>Date</th>
+               <th>Fadjr</th>
+               <th>Sunrise</th>
+               <th>Dhuhr</th>
+               <th>Asr</th>
+               <th>Maghrib</th>
+               <th>Isha</th>
+            </tr>
+            <tr>
+               <th> {{ times_today.0 }}</th>
+               <th> {{ times_today.1.fajr }} </th>
+               <th> {{ times_today.1.sunrise }} </th>
+               <th> {{ times_today.1.dhuhr }} </th>
+               <th> {{ times_today.1.asr }} </th>
+               <th> {{ times_today.1.maghrib }} </th>
+               <th> {{ times_today.1.isha }} </th>
+            </tr>
+      </table>
+      <h1>Prayer times in Berlin for the next 7 days</h1>
+      <table style="width:100%">
+            <tr>
+               <th>Date</th>
+               <th>Fadjr</th>
+               <th>Sunrise</th>
+               <th>Dhuhr</th>
+               <th>Asr</th>
+               <th>Maghrib</th>
+               <th>Isha</th>
+            </tr>
+            {% for times in times_next_days %}
+            <tr>
+               <th> {{ times.0 }}</th>
+               <th> {{ times.1.fajr }} </th>
+               <th> {{ times.1.sunrise }} </th>
+               <th> {{ times.1.dhuhr }} </th>
+               <th> {{ times.1.asr }} </th>
+               <th> {{ times.1.maghrib }} </th>
+               <th> {{ times.1.isha }} </th>
+            </tr>
+            {% endfor %}
+      </table>
+   </div>
+</body>

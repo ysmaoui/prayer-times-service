@@ -1,0 +1,19 @@
+version: "3"
+
+services:
+  app:
+    container_name: prayer-times-service
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    expose:
+      - 80
+    restart: always
+    environment:
+      VIRTUAL_HOST: {{DOMAIN}}
+      LETSENCRYPT_HOST: {{DOMAIN}}
+      LETSENCRYPT_EMAIL: {{EMAIL}}
+networks:
+  default:
+    external:
+      name: {{NGINX_PROXY}}
