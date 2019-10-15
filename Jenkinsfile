@@ -37,6 +37,7 @@ node{
             }
             finally{
                 sh """
+                docker ps
                 docker stop prayer-times-service-container
                 """
             }
