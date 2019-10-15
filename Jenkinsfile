@@ -47,10 +47,12 @@ node{
         throw e
     }
     finally{
-        docker rmi prayer-times-service
         cleanWs()
 
+        sh """
+        docker rmi prayer-times-service
         docker images
+        """
     }
 
 }
