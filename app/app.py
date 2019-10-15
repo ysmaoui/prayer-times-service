@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 from flask import Flask, render_template
-from flask_restful import Resource, Api
+from flask_restful import Api
 
 # from praytime_raspberrypi import myPrayTimes_experiments as praytimes
 import get_prayerTimes as prayertimes
-
-import json
 
 import datetime
 

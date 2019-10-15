@@ -1,6 +1,4 @@
 from praytimes import PrayTimes
-#from datetime import date
-import datetime
 
 places = {'berlin': (52.511, 13.44013)}
 
