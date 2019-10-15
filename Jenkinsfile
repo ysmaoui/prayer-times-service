@@ -20,17 +20,27 @@ node{
             """
         }
         stage("test"){
-            sh """
-            docker run \
-                --rm -d \
-                --name prayer-times-service-container \
-                -p 8888:80 \
-                prayer-times-service
+            try{
+                sh """
+                docker run \
+                    --rm -d \
+                    --name prayer-times-service-container \
+                    -p 8888:80 \
+                    prayer-times-service
 
-            curl localhost:8888
+                sleep 5
 
-            docker stop prayer-times-service-container
-            """
+                curl localhost:8888
+                """
+            }catch(e){
+                throw e
+            }
+            finally{
+                sh """
+                docker stop prayer-times-service-container
+                """
+            }
+
         }
     }
     catch(e){
