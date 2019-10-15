@@ -16,7 +16,7 @@ node{
 
         stage("build"){
             sh """
-            docker build -t prayer-times-service
+            docker build -t prayer-times-service .
             """
         }
         stage("test"){
