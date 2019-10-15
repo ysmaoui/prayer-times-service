@@ -14,10 +14,22 @@ node{
             """
         }
 
-            stage("build"){
+        stage("build"){
             sh """
-            pwd
-            ls -la
+            docker build -t prayer-times-service
+            """
+        }
+        stage("test"){
+            sh """
+            docker run \
+                --rm -d \
+                --name prayer-times-service-container \
+                -p 8888:80 \
+                prayer-times-service
+
+            curl localhost:8888
+
+            docker stop prayer-times-service-container
             """
         }
     }
@@ -25,7 +37,10 @@ node{
         throw e
     }
     finally{
+        docker rmi prayer-times-service
         cleanWs()
+
+        docker images
     }
 
 }
