@@ -13,4 +13,11 @@ node{
         git ls-files --exclude='Dockerfile*' --ignored | xargs hadolint
         """
     }
+
+        stage("build"){
+        sh """
+        pwd
+        ls -la
+        """
+    }
 }
