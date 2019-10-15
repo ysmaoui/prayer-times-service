@@ -3,9 +3,14 @@
 
 node{
 
-    stage("step1"){
+    stage("checkout"){
+        checkout scm
+    }
+
+    stage("lint"){
         sh """
-        echo "running step 1"
+        python3 -m flake8 --exclude praytimes.py
+        git ls-files --exclude='Dockerfile*' --ignored | xargs hadolint
         """
     }
 }
