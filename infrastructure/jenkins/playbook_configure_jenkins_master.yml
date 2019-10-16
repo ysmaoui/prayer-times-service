@@ -1,0 +1,107 @@
+---
+- hosts: all
+  gather_facts: yes
+  become_user: root
+  become: yes
+
+  vars:
+    efs_file_system_id: "[ID here]"
+    efs_mount_dir: /var/lib/jenkins
+    aws_region: "[region here]"
+
+  tasks:
+
+    # install docker
+
+    - name: Install aptitute using apt
+      apt: name=aptitude state=latest update_cache=yes force_apt_get=yes
+
+    - name: Install required system packages
+      apt: name={{ item}} state=latest update_cache=yes
+      loop: ['apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'python3-pip', 'virtualenv', 'python3-setuptools', 'unzip']
+
+    - name: Add Docker GPG apt key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu bionic stable
+        state: present
+
+    - name: Update apt and install docker-ce
+      apt: update_cache=yes name=docker-ce state=latest
+
+    - name: Install Docker Module for Python
+      pip:
+        name: docker
+
+    - name: Configure Docker to be used by a non-root user
+      shell:
+        usermod -aG docker ubuntu
+
+    # install linting tools and jenkins dependencies
+
+    - name: Install required system packages
+      apt: name={{ item }} state=latest update_cache=yes
+      loop: [nfs-common, openjdk-8-jdk, wget, python3-pip]
+
+    - name: Install hadolint for linting dockerfiles
+      shell: |
+        wget -O /bin/hadolint https://github.com/hadolint/hadolint/releases/download/v1.16.3/hadolint-Linux-x86_64 &&\
+        chmod +x /bin/hadolint
+
+    - name: Install flake8 for linting python scripts
+      shell: |
+        python3 -m pip install flake8
+
+    # Jenkins Setup
+
+    - name: create EFS mount directory
+      file:
+        path: "{{ efs_mount_dir }}"
+        state: directory
+        mode: 0755
+
+    - name: mount EFS volume
+      mount:
+        name: "{{ efs_mount_dir }}"
+        src: "{{ efs_file_system_id }}.efs.{{ aws_region }}.amazonaws.com:/"
+        fstype: nfs4
+        opts: nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2
+        state: mounted
+
+    - name: change ownership of the mounted directory
+      file:
+        path: "{{ efs_mount_dir }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+
+    - name: list volumes
+      shell: df -h
+      args:
+        executable: /bin/bash
+      register: df
+
+    - debug: var=df
+
+    - name: jenkins apt repo key
+      apt_key: url=https://pkg.jenkins.io/debian-stable/jenkins.io.key state=present
+
+    - name: jenkins apt repo
+      apt_repository: repo='deb https://pkg.jenkins.io/debian-stable binary/' state=present
+
+    - name: install jenkins
+      apt: name=jenkins update_cache=yes
+
+    - name: jenkins service started
+      service: name=jenkins state=started
+
+    - name: Configure Docker to be used by a jenkins user
+      shell:
+        usermod -aG docker jenkins
+
+    - name: jenkins service started
+      service: name=jenkins state=restarted
