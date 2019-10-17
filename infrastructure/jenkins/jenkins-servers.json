@@ -1,0 +1,22 @@
+[
+    {
+        "ParameterKey": "EnvironmentName",
+        "ParameterValue": "JenkinsCluster"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": "smaoui_ssh_key"
+    },
+    {
+        "ParameterKey": "JenkinsMasterInstanceType",
+        "ParameterValue": "t2.micro"
+    },
+    {
+        "ParameterKey": "JenkinsMasterInstanceType",
+        "ParameterValue": "t2.micro"
+    },
+    {
+        "ParameterKey": "JenkinsMasterConfigEFS",
+        "ParameterValue": "fs-d09fc37b"
+    }
+]

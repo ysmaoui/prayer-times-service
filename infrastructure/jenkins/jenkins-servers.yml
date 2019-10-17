@@ -1,0 +1,204 @@
+Description:
+  A Jenkins Cluster - Servers
+
+Parameters:
+
+  EnvironmentName:
+    Description: environment name
+    Type: String
+
+  KeyName:
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+
+  JenkinsMasterConfigEFS:
+    ConstraintDescription: must be an existing EFS ID
+    Description: File system ID where the JENKINS_HOME should be stored
+    Type: String
+
+  WebServerInstanceType:
+    AllowedValues:
+      - t2.micro
+      - t2.medium
+      - t3.medium
+    ConstraintDescription: must be a valid EC2 instance type.
+    Default: t2.micro
+    Description: Webserber EC2 instance type
+    Type: String
+
+  JenkinsMasterInstanceType:
+    Description: Instance type for the Jenkins Master
+    Type: String
+    AllowedValues:
+      - t2.micro
+    ConstraintDescription: must be a valid EC2 instance type.
+    Default: t2.micro
+
+  MountPoint:
+    Description: Linux mount point for the EFS volume
+    Type: String
+    Default: "/var/lib/jenkins"
+
+Mappings:
+  AWSInstanceType2Arch:
+    # 1 vCPU 1GB
+    t2.micro:
+      Arch: HVM64
+    # 2 vCPU 4GB
+    t2.medium:
+      Arch: HVM64
+    # 2 vCPU 4GB
+    t3.medium:
+      Arch: HVM64
+  AWSRegionArch2AMI:
+    us-west-2:
+      # ubuntu 18 64-bit x86
+      HVM64: ami-06f2f779464715dc5
+
+
+Resources:
+  JenkinsMasterConfigEFSMountTargetAZ1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref JenkinsMasterConfigEFS
+      SecurityGroups:
+        - !Ref EFSSecGroup
+      SubnetId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-PRI1-SN"
+
+  JenkinsMasterConfigEFSMountTargetAZ2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref JenkinsMasterConfigEFS
+      SecurityGroups:
+        - !Ref EFSSecGroup
+      SubnetId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-PRI2-SN"
+
+  JenkinsMasterSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allowing access to port 22 for ssh
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+
+  EFSSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allowing access to port 2049 for EFS
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          CidrIp:
+            Fn::ImportValue:
+              !Sub "${EnvironmentName}-VPC-CIDR"
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - UdacityS3ReadOnlyEC2
+
+  JenkinsMasterLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      AWS::CloudFormation::Authentication:
+        S3AccessCreds:
+          type: S3
+          roleName: UdacityS3ReadOnlyEC2
+      AWS::CloudFormation::Init:
+        configSets:
+          MountConfig:
+            - setup
+        setup:
+          files:
+            /tmp/playbook_configure_jenkins_master.yml:
+              source: "https://udacity-cloudformation-project-yacine.s3.amazonaws.com/playbook_configure_jenkins_master.yml"
+              mode: "000644"
+              owner: "root"
+              group: "root"
+              authentication: S3AccessCreds
+            /tmp/setup_ansible:
+              content: !Sub |
+                #!/bin/bash -xe
+                apt-get update
+                apt-get install -y software-properties-common
+                apt-add-repository --yes --update ppa:ansible/ansible
+                apt-get install -y ansible
+                echo "localhost ansible_connection=local" > /etc/ansible/hosts
+              mode: "000500"
+              owner: "root"
+              group: "root"
+          commands:
+            01_install_ansible:
+              command:
+                "/tmp/setup_ansible > /var/log/setup_ansible.log 2>&1"
+            02_run_ansible_playbook:
+              command:
+                !Sub "ansible-playbook /tmp/playbook_configure_jenkins_master.yml --extra-vars \"efs_file_system_id=${JenkinsMasterConfigEFS} aws_region=${AWS::Region}\" > /var/log/playbook_configure_jenkins_master.log 2>&1"
+
+    Properties:
+      ImageId: !FindInMap [ AWSRegionArch2AMI, !Ref 'AWS::Region' , !FindInMap [ AWSInstanceType2Arch, !Ref JenkinsMasterInstanceType, Arch ] ]
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - !Ref JenkinsMasterSecGroup
+      InstanceType: !Ref JenkinsMasterInstanceType
+      IamInstanceProfile: !Ref InstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          apt-get update
+          apt-get -y install python-pip
+          pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+          /usr/local/bin/cfn-init -v \
+            --stack ${AWS::StackName} \
+            --resource JenkinsMasterLaunchConfig \
+            --configsets MountConfig \
+            --region ${AWS::Region}
+          /usr/local/bin/cfn-signal -e $? \
+            --stack ${AWS::StackName} \
+            --resource JenkinsMasterGroup \
+            --region ${AWS::Region}
+
+  JenkinsMasterGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - Fn::ImportValue: !Sub "${EnvironmentName}-PUB-NETS"
+      LaunchConfigurationName:
+        !Ref JenkinsMasterLaunchConfig
+      MinSize: 1
+      MaxSize: 1
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT10M
+        WaitOnResourceSignals: true
+        SuspendProcesses:
+          - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
