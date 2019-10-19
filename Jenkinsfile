@@ -1,9 +1,11 @@
 #!/usr/bin/env groovy
 
-
 node{
+    def app
+    def dockerImageTag = "ysmaoui/prayer-times-service"
     try{
-        stage("checkout"){
+        stage("preparation"){
+            cleanWs()
             checkout scm
         }
 
@@ -15,33 +17,28 @@ node{
         }
 
         stage("build"){
-            sh """
-            docker build -t prayer-times-service .
-            """
+            app = docker.build(dockerImageTag)
         }
         stage("test"){
             try{
-                sh """
-                docker run \
-                    --rm -d \
-                    --name prayer-times-service-container \
-                    -p 8888:80 \
-                    prayer-times-service
+                docker.image(dockerImageTag).withRun("-p 8888:80") { c->
+                    sh 'curl localhost:8888'
+                }
 
-                sleep 5
-
-                curl localhost:8888
-                """
             }catch(e){
                 throw e
             }
             finally{
                 sh """
                 docker ps
-                docker stop prayer-times-service-container
                 """
             }
-
+        }
+        stage("Upload Docker image"){
+            docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials'){
+                app.push("${env.BUILD_NUMBER}")
+                app.push("latest")
+            }
         }
     }
     catch(e){
@@ -51,9 +48,8 @@ node{
         cleanWs()
 
         sh """
-        docker rmi prayer-times-service
+        docker rmi $dockerImageTag
         docker images
         """
     }
-
 }
