@@ -1,14 +1,11 @@
 #!/usr/bin/env groovy
 
 node{
+    def app
+    def dockerImageTag = "ysmaoui/prayer-times-service"
     try{
-        def app
-        def dockerImageTag = "ysmaoui/prayer-times-service"
-
-        stage("Preparation"){
+        stage("preparation"){
             cleanWs()
-        }
-        stage("checkout"){
             checkout scm
         }
 
@@ -66,5 +63,4 @@ node{
         docker images
         """
     }
-
 }
