@@ -44,7 +44,6 @@ node{
                     sh 'curl localhost:8888'
                 }
 
-                docker.run()
             }catch(e){
                 throw e
             }
@@ -63,7 +62,7 @@ node{
         cleanWs()
 
         sh """
-        docker rmi prayer-times-service
+        docker rmi $dockerImageTag
         docker images
         """
     }
