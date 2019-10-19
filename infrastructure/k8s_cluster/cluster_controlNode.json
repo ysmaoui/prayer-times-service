@@ -1,0 +1,10 @@
+[
+    {
+        "ParameterKey": "EnvironmentName",
+        "ParameterValue": "K8S-Cluster"
+    },
+    {
+        "ParameterKey": "EKSRoleARN",
+        "ParameterValue": "arn:aws:iam::571667314655:role/eks_role"
+    }
+]
