@@ -1,0 +1,22 @@
+[
+    {
+        "ParameterKey": "EnvironmentName",
+        "ParameterValue": "K8S-Cluster"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": "smaoui_ssh_key"
+    },
+    {
+        "ParameterKey": "NodeImageId",
+        "ParameterValue": "ami-05d586e6f773f6abf"
+    },
+    {
+        "ParameterKey": "ClusterName",
+        "ParameterValue": "k8s-cluster"
+    },
+    {
+        "ParameterKey": "NodeGroupName",
+        "ParameterValue": "K8S-Cluster"
+    }
+]
