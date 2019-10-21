@@ -59,6 +59,8 @@ infrastructure/create.sh k8s-Cluster-Workers infrastructure/k8s_cluster/cluster_
     curl -O https://amazon-eks.s3-us-west-2.amazonaws.com/cloudformation/2019-01-09/aws-auth-cm.yaml
     ```
 
+    **or** use the file `k8s_cluster/aws-auth-cm.yml` from the current repo.
+
     2. modfiy the `aws-auth-cm.yaml` file and adjust the role arn with the nodeInstanceRole arn associated with the launchconfig of the worker nodes ( the value is defined as output in cluster_workerNodes.yml )
 
     ```sh
@@ -75,8 +77,28 @@ infrastructure/create.sh k8s-Cluster-Workers infrastructure/k8s_cluster/cluster_
             - system:bootstrappers
             - system:nodes
     ```
+    3. Also add the IAM-user used by jenkins to give it access to the cluster
 
-    3. apply the configMap to the cluster
+    ```sh
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+        name: aws-auth
+        namespace: kube-system
+        data:
+        mapRoles: |
+            - rolearn: 	<arn_of_instance_role_of_worker_nodes>
+            username: system:node:{{EC2PrivateDNSName}}
+            groups:
+                - system:bootstrappers
+                - system:nodes
+            - rolearn: <arn_of_jenkins_user_that_needs_to_control_the_cluster>
+            username: <jenkins_user_name>
+            groups:
+                - system:masters
+    ```
+
+    4. apply the configMap to the cluster
 
     ```sh
     kubectl apply -f aws-auth-cm.yaml
@@ -89,7 +111,45 @@ kubectl get nodes
 ```
 
 
+## Notes
 
+### Policies needed by the IAM-jenkins-user
 
+The IAM-jenkins-user is the aws user that will be used by jenkins to interact with the aws resources
+
+* To be able to get the kubeconfig, the IAM-jenkins-user needs the following permissions
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "eks:DescribeCluster",
+                "eks:ListClusters"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+* it is also possible to give the jenkins user complete admin rights to the eks resources
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "eks:*"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
 
 
