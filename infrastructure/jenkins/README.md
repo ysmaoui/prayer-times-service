@@ -51,3 +51,34 @@ By storing the jenkins configuration in an EFS volume we are able to kill and st
 
 TODO: make buckups of the EFS volume ( backup of the jenkins configuration)
 TODO: Add Jenkins slaves and remove the executers from the jenkins master
+
+
+## Notes
+
+### Setup of AWS credentials in Jenkins
+
+**NOTE:** make sure to check the aws credentials setup in jenkins specially extra spaces that might have been added by mistake during copy/paste
+
+* use the plugin [<https://wiki.jenkins.io/display/JENKINS/CloudBees+AWS+Credentials+Plugin>] to add support for aws credentials in jenkins
+* add aws credentials as global credentials in Jenkins:
+  * Credentials > System > Global credentials (unrestricted) > Add Credentials   then select kind `AWS credentials` and enter the acces key and the secret
+* use the plugin [<https://jenkins.io/doc/pipeline/steps/credentials-binding/>] to use the credentials in pipelines
+
+  ```groovy
+  node {
+
+    stage("setup Cluster"){
+
+      withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS-CREDENTIALS', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+          sh """
+
+          aws sts get-caller-identity
+
+          kubectl get nodes
+
+          kubectl get pods
+          """
+      }
+    }
+  }
+  ```
