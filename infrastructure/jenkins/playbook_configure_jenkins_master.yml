@@ -105,3 +105,17 @@
 
     - name: jenkins service started
       service: name=jenkins state=restarted
+
+    # Setup Kubectl
+
+    - name: install kubectl to interact with a kubernetes cluster
+      shell: |
+        curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
+        chmod +x ./kubectl
+        mv ./kubectl /usr/local/bin/kubectl
+
+    # Setup aws-cli
+
+    - name: Install aws-cli
+      shell: |
+        pip3 install --upgrade awscli
