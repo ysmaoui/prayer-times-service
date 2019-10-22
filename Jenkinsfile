@@ -34,10 +34,18 @@ node{
                 """
             }
         }
-        stage("Upload Docker image"){
-            docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials'){
-                app.push("${env.BUILD_NUMBER}")
-                app.push("latest")
+        if( env.BRANCH_NAME == "release"){
+            stage("Upload Docker image"){
+                docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials'){
+                    app.push("${env.BUILD_NUMBER}")
+                    app.push("latest")
+                }
+            }
+
+            stage("deploy"){
+                sh """
+                echo deploying to k8s cluster
+                """
             }
         }
     }
