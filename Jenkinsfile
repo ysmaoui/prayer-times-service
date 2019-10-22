@@ -37,7 +37,7 @@ node{
         if( env.BRANCH_NAME.startsWith("release/")){
             stage("Upload Docker image"){
                 docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials'){
-                    app.push("${env.BUILD_NUMBER}")
+                    app.push("${env.BRANCH_NAME}".substring(8))
                     app.push("latest")
                 }
             }
