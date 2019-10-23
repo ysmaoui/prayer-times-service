@@ -189,6 +189,10 @@ Resources:
       MaxSize: 1
       TargetGroupARNs:
         - !Ref JenkinsMasterTargetGroup
+      Tags:
+      - Key: Name
+        Value: !Sub "${EnvironmentName}-Instance"
+        PropagateAtLaunch: 'true'
     CreationPolicy:
       ResourceSignal:
         Timeout: PT10M
