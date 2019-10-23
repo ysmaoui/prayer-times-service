@@ -3,7 +3,8 @@
 main(){
 
     # get deployed service role
-    export DEPLOYED_ROLE=$(kubectl get services -l app=tomcat -o jsonpath="{.items[*].spec.selector.role}")
+    DEPLOYED_ROLE=$(kubectl get services -l app=tomcat -o jsonpath="{.items[*].spec.selector.role}")
+    export DEPLOYED_ROLE
 
     if [[ -z "$DEPLOYED_ROLE" ]]
     then
@@ -14,11 +15,12 @@ main(){
         # TODO: deploy service
 
     else
-        if [["$DEPLOYED_ROLE" == "blue"]]
+        if [[ "$DEPLOYED_ROLE" == "blue" ]]
         then
         export TARGET_ROLE="green"
 
-        elif [["$DEPLOYED_ROLE" == "green"]]
+        elif [[ "$DEPLOYED_ROLE" == "green" ]]
+        then
         export TARGET_ROLE="blue"
 
         else
@@ -33,6 +35,8 @@ main(){
         envsubst < deployment_config/service.yml | kubectl apply -f -
         # delete old deployment
         kubectl delete deployment "tomcat-deployment-${DEPLOYED_ROLE}"
+        fi
+    fi
 }
 
 
