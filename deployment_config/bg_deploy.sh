@@ -4,11 +4,7 @@ APP_NAME="prayertimes"
 
 main(){
 
-    echo "====================Initial State================="
     print_state
-
-
-    echo "===============Starting deployment================="
 
     # get deployed service role
     DEPLOYED_ROLE=$(kubectl get services -l app=${APP_NAME} -o jsonpath="{.items[*].spec.selector.role}")
@@ -82,7 +78,9 @@ main(){
 
 print_state(){
 
-    echo "+++++++++++ BEGIN: Cluster State description +++++++++++++++"
+    set +x
+
+    printf "\n\n============ BEGIN: Cluster State description ============\n\n"
 
     printf "\nLisitng available deployments\n"
     kubectl get deployments -o wide
@@ -93,7 +91,9 @@ print_state(){
     printf "\nLisitng available pods and their nodes\n"
     kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
 
-    echo "+++++++++++ Cluster State description: END +++++++++++++++"
+    printf "\n\n============ Cluster State description: END ============\n\n"
+
+    set -x
 }
 
 main
