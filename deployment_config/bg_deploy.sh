@@ -63,11 +63,11 @@ main(){
         kubectl get svc -l app=prayertimes -o wide
         printf "\nTesting the deployed service\n"
         service_hostname=$(kubectl get svc prayertimes-service -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
-        curl -I "$service_hostname"
+        curl -I "${service_hostname}m"
 
 
         # delete old deployment
-        printf "\nDelete old deployment"
+        printf "\nDelete old deployment\n"
         kubectl delete deployment "prayertimes-deployment-${DEPLOYED_ROLE}"
 
         sleep 3
