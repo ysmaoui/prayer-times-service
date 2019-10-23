@@ -7,10 +7,10 @@ main(){
     print_state
 
     # get deployed service role
-    DEPLOYED_ROLE=$(kubectl get services -l app=${APP_NAME} -o jsonpath="{.items[*].spec.selector.role}")
-    export DEPLOYED_ROLE
+    INITIALLY_DEPLOYED_ROLE=$(kubectl get services -l app=${APP_NAME} -o jsonpath="{.items[*].spec.selector.role}")
+    export INITIALLY_DEPLOYED_ROLE
 
-    if [[ -z "$DEPLOYED_ROLE" ]]
+    if [[ -z "$INITIALLY_DEPLOYED_ROLE" ]]
     then
 
         echo "*****: Initially no service for the app was deployed => deploying initial Blue deployment *****"
@@ -28,20 +28,18 @@ main(){
         curl -I "$service_hostname"
 
     else
-        if [[ "$DEPLOYED_ROLE" == "blue" ]]
+        if [[ "$INITIALLY_DEPLOYED_ROLE" == "blue" ]]
         then
         export TARGET_ROLE="green"
 
-        elif [[ "$DEPLOYED_ROLE" == "green" ]]
+        elif [[ "$INITIALLY_DEPLOYED_ROLE" == "green" ]]
         then
         export TARGET_ROLE="blue"
 
         else
-            echo "Service role was not recognized: ${DEPLOYED_ROLE}"
+            echo "Service role was not recognized: ${INITIALLY_DEPLOYED_ROLE}"
             exit 1
         fi
-
-        print_state
 
         # deploy second role
         printf "\nDeploying role: %s" "${TARGET_ROLE}"
@@ -67,9 +65,10 @@ main(){
 
         # delete old deployment
         printf "\nDelete old deployment\n"
-        kubectl delete deployment "${APP_NAME}-deployment-${DEPLOYED_ROLE}"
+        kubectl delete deployment "${APP_NAME}-deployment-${INITIALLY_DEPLOYED_ROLE}"
 
-        sleep 3
+        # wait for all pods to be deleted
+        sleep 5
 
         print_state
     fi
@@ -91,7 +90,7 @@ print_state(){
     printf "\nLisitng available pods and their nodes\n"
     kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
 
-    printf "\n\n============ Cluster State description: END ============\n\n"
+    printf "\n============ Cluster State description: END ============\n\n\n"
 
     set -x
 }
