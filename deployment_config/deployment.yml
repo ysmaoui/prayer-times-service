@@ -12,10 +12,10 @@ spec:
     spec:
       containers:
       - name: tomcat-container
-        image: tomcat:${APP_VERSION}
+        image: ysmaoui/prayer-times-service:${APP_VERSION}
         ports:
-        - containerPort: 8080
+        - containerPort: 80
         readinessProbe:
           httpGet:
             path: /
-            port: 8080
+            port: 80

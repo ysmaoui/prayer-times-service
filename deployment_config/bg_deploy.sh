@@ -28,14 +28,26 @@ main(){
             exit 1
         fi
 
+        # list running pods
+        kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
+
         # deploy second role
         envsubst < deployment_config/deployment.yml | kubectl apply -f -
-        # test
+
+        # list running pods
+        kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
+
+
+        # test with test_service
 
         # if tests successful switch service to new deployment
         envsubst < deployment_config/service.yml | kubectl apply -f -
         # delete old deployment
         kubectl delete deployment "tomcat-deployment-${DEPLOYED_ROLE}"
+
+        # list running pods
+        kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
+
     fi
 }
 
