@@ -88,7 +88,7 @@ print_state(){
     kubectl get services -o wide
 
     printf "\nLisitng available pods and their nodes\n"
-    kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
+    kubectl get pods -o wide
 
     printf "\n============ Cluster State description: END ============\n\n\n"
 
