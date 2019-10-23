@@ -3,7 +3,7 @@
 main(){
 
     # get deployed service role
-    DEPLOYED_ROLE=$(kubectl get services -l app=tomcat -o jsonpath="{.items[*].spec.selector.role}")
+    DEPLOYED_ROLE=$(kubectl get services -l app=prayertimes -o jsonpath="{.items[*].spec.selector.role}")
     export DEPLOYED_ROLE
 
     if [[ -z "$DEPLOYED_ROLE" ]]
@@ -34,6 +34,8 @@ main(){
         # deploy second role
         envsubst < deployment_config/deployment.yml | kubectl apply -f -
 
+        kubectl rollout status deployment "prayertimes-deployment-${TARGET_ROLE}"
+
         # list running pods
         kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
 
@@ -43,8 +45,9 @@ main(){
         # if tests successful switch service to new deployment
         envsubst < deployment_config/service.yml | kubectl apply -f -
         # delete old deployment
-        kubectl delete deployment "tomcat-deployment-${DEPLOYED_ROLE}"
+        kubectl delete deployment "prayertimes-deployment-${DEPLOYED_ROLE}"
 
+        sleep 2
         # list running pods
         kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
 

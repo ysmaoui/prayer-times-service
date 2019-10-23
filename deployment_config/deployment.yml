@@ -1,17 +1,17 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: tomcat-deployment-${TARGET_ROLE}
+  name: prayertimes-deployment-${TARGET_ROLE}
 spec:
   replicas: 2
   template:
     metadata:
       labels:
-        app: tomcat
+        app: prayertimes
         role: ${TARGET_ROLE}
     spec:
       containers:
-      - name: tomcat-container
+      - name: prayertimes-container
         image: ysmaoui/prayer-times-service:${APP_VERSION}
         ports:
         - containerPort: 80

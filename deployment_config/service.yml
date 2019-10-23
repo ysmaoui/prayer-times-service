@@ -1,15 +1,15 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: tomcat-service
+  name: prayertimes-service
   labels:
-    app: tomcat
+    app: prayertimes
     role: ${TARGET_ROLE}
     env: prod
 spec:
   type: LoadBalancer
   selector:
-    app: tomcat
+    app: prayertimes
     role: ${TARGET_ROLE}
   ports:
     - port: 80
