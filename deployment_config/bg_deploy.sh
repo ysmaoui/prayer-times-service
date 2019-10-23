@@ -32,7 +32,8 @@ main(){
         print_state
 
         service_hostname=$(kubectl get svc ${APP_NAME}-service -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
-        curl -I "$service_hostname"
+        # curl -I "$service_hostname"
+        test_service "$service_hostname" 120
 
     else
         if [[ "$INITIALLY_DEPLOYED_ROLE" == "blue" ]]
@@ -75,7 +76,8 @@ main(){
 
         printf "\nTesting the deployed service\n"
         service_hostname=$(kubectl get svc ${APP_NAME}-service -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
-        curl -I "${service_hostname}"
+        #curl -I "${service_hostname}"
+        test_service "$service_hostname" 120
 
 
         # delete old deployment
@@ -108,6 +110,24 @@ print_state(){
     printf "\n============ Cluster State description: END ============\n\n\n"
 
     set -x
+}
+
+
+test_service(){
+    url=$1
+    timeout=$2
+
+    until $(curl --output /dev/null --silent --head --fail "$url"); do
+
+        if $timeout -le 0 ; then
+            echo "Could not reach service: timeout"
+            exit 1
+        fi
+
+        printf '.'
+        sleep 5
+        timeout=$($timeout - 5)
+    done
 }
 
 main
