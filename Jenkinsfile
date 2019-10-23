@@ -34,18 +34,30 @@ node{
                 """
             }
         }
-        if( env.BRANCH_NAME.startsWith("release/")){
+        if( env.BRANCH_NAME.startsWith("release/") || env.BRANCH_NAME.startsWith("deployment")){
             stage("Upload Docker image"){
                 docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials'){
-                    app.push("${env.BRANCH_NAME}".substring(8))
+                    env.APP_VERSION="${env.BRANCH_NAME}".substring(8)
+                    app.push("${env.APP_VERSION}")
                     app.push("latest")
                 }
             }
 
-            stage("deploy"){
-                sh """
-                echo deploying to k8s cluster
-                """
+            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS-CREDENTIALS', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                stage("setup Cluster"){
+                    sh """
+                    aws sts get-caller-identity
+                    aws eks --region us-west-2 update-kubeconfig --name k8s-cluster
+                    kubectl get nodes
+                    """
+                }
+                stage("deploy"){
+                    sh """
+                    pwd
+                    export APP_VERSION=7
+                    ./deployment_config/bg_deploy.sh
+                    """
+                }
             }
         }
     }
