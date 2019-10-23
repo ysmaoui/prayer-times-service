@@ -26,6 +26,7 @@ main(){
         else
             echo "service role was not recognized: ${DEPLOYED_ROLE}"
             exit 1
+        fi
 
         # deploy second role
         envsubst < deployment_config/deployment.yml | kubectl apply -f -
@@ -35,7 +36,6 @@ main(){
         envsubst < deployment_config/service.yml | kubectl apply -f -
         # delete old deployment
         kubectl delete deployment "tomcat-deployment-${DEPLOYED_ROLE}"
-        fi
     fi
 }
 
