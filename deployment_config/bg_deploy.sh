@@ -22,9 +22,10 @@ main(){
 
         printf "\nWaiting for Pods to be ready\n"
 
-        while [[ $(kubectl get pods -l app=${APP_NAME} -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]];
-        do echo "waiting for pod" && sleep 1;
-        done
+        # while [[ $(kubectl get pods -l app=${APP_NAME} -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]];
+        # do echo "waiting for pod" && sleep 1;
+        # done
+        kubectl wait pods -l app=${APP_NAME} --for condition=ContainersReady
 
         envsubst < deployment_config/service.yml | kubectl apply -f -
 
@@ -53,9 +54,11 @@ main(){
 
         printf "\nWaiting for Pods to be ready\n"
 
-        while [[ $(kubectl get pods -l app=${APP_NAME} -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]];
-        do echo "waiting for pod" && sleep 1;
-        done
+        # while [[ $(kubectl get pods -l app=${APP_NAME} -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]];
+        # do echo "waiting for pod" && sleep 1;
+        # done
+
+        kubectl wait pods -l app=${APP_NAME} --for condition=ContainersReady
 
         printf "\nWaiting for deployment to be done\n"
         kubectl rollout status deployment "${APP_NAME}-deployment-${TARGET_ROLE}"
