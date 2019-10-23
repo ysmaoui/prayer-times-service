@@ -12,7 +12,7 @@ main(){
         export TARGET_ROLE="blue"
         export APP_VERSION="${APP_VERSION}"
         envsubst < deployment_config/deployment.yml | kubectl apply -f -
-        # TODO: deploy service
+        envsubst < deployment_config/service.yml | kubectl apply -f -
 
     else
         if [[ "$DEPLOYED_ROLE" == "blue" ]]

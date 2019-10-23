@@ -56,7 +56,7 @@ node{
                     pwd
                     ls -la
                     export APP_VERSION=7
-                    bash ./deployment_config/bg_deploy.sh
+                    bash -xe ./deployment_config/bg_deploy.sh
                     """
                 }
             }
