@@ -22,6 +22,7 @@ node{
         stage("test"){
             try{
                 docker.image(dockerImageTag).withRun("-p 8888:80") { c->
+                    sleep 2
                     sh 'curl localhost:8888'
                 }
 
@@ -53,8 +54,6 @@ node{
                 }
                 stage("deploy"){
                     sh """
-                    pwd
-                    ls -la
                     bash -xe ./deployment_config/bg_deploy.sh
                     """
                 }

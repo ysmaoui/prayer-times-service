@@ -17,10 +17,10 @@ main(){
         envsubst < deployment_config/service.yml | kubectl apply -f -
 
         # list running pods
-        printf "\nLisitng available pods and their nodes"
+        printf "\nLisitng available pods and their nodes\n"
         kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
 
-        printf "\n listing available services"
+        printf "\n listing available services\n"
         kubectl get svc -o wide
         service_hostname=$(kubectl get svc prayertimes-service -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
         curl -I "$service_hostname"
@@ -40,37 +40,39 @@ main(){
         fi
 
         # list running pods
-        printf "\nLisitng available pods and their nodes"
+        printf "\nLisitng available pods and their nodes\n"
         kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
 
         # deploy second role
         printf "\nDeploying role: %s" "${TARGET_ROLE}"
         envsubst < deployment_config/deployment.yml | kubectl apply -f -
 
-        printf "\nWaiting for deployment to be done"
+        printf "\nWaiting for deployment to be done\n"
         kubectl rollout status deployment "prayertimes-deployment-${TARGET_ROLE}"
 
-        printf "\nlisting existing services"
-        kubectl get svc -l app=prayertimes -o wide
-        printf "\nTesting the deployed service"
-        service_hostname=$(kubectl get svc prayertimes-service -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
-        curl -I "$service_hostname"
-
-        printf "\nLisitng available pods and their nodes"
+        printf "\nLisitng available pods and their nodes\n"
         kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
 
         # test with test_service
 
         # if tests successful switch service to new deployment
-        printf "\nSwitching service to new deployment"
+        printf "\nSwitching service to new deployment\n"
         envsubst < deployment_config/service.yml | kubectl apply -f -
+
+        printf "\nlisting existing services\n"
+        kubectl get svc -l app=prayertimes -o wide
+        printf "\nTesting the deployed service\n"
+        service_hostname=$(kubectl get svc prayertimes-service -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
+        curl -I "$service_hostname"
+
+
         # delete old deployment
         printf "\nDelete old deployment"
         kubectl delete deployment "prayertimes-deployment-${DEPLOYED_ROLE}"
 
-        sleep 2
+        sleep 3
         # list running pods
-        printf "\nLisitng available pods and their nodes"
+        printf "\nLisitng available pods and their nodes\n"
         kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
 
     fi
