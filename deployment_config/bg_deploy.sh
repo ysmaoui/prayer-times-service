@@ -22,18 +22,17 @@ main(){
 
         printf "\nWaiting for Pods to be ready\n"
 
-        # while [[ $(kubectl get pods -l app=${APP_NAME} -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]];
-        # do echo "waiting for pod" && sleep 1;
-        # done
         kubectl wait pods -l app=${APP_NAME} --for condition=ContainersReady
 
         envsubst < deployment_config/service.yml | kubectl apply -f -
 
         print_state
 
-        service_hostname=$(kubectl get svc ${APP_NAME}-service -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
-        # curl -I "$service_hostname"
-        test_service "$service_hostname" 120
+        get_service_hostname
+        test_service "$service_hostname" "180"
+
+        printf "\nService Deployed successfully\n"
+        curl -I "$service_hostname"
 
     else
         if [[ "$INITIALLY_DEPLOYED_ROLE" == "blue" ]]
@@ -55,10 +54,6 @@ main(){
 
         printf "\nWaiting for Pods to be ready\n"
 
-        # while [[ $(kubectl get pods -l app=${APP_NAME} -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]];
-        # do echo "waiting for pod" && sleep 1;
-        # done
-
         kubectl wait pods -l app=${APP_NAME} --for condition=ContainersReady
 
         printf "\nWaiting for deployment to be done\n"
@@ -75,10 +70,8 @@ main(){
         print_state
 
         printf "\nTesting the deployed service\n"
-        service_hostname=$(kubectl get svc ${APP_NAME}-service -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
-        #curl -I "${service_hostname}"
-        test_service "$service_hostname" 120
-
+        get_service_hostname
+        test_service "$service_hostname" "180"
 
         # delete old deployment
         printf "\nDelete old deployment\n"
@@ -114,20 +107,36 @@ print_state(){
 
 
 test_service(){
+    set +x
     url=$1
     timeout=$2
 
-    until $(curl --output /dev/null --silent --head --fail "$url"); do
+    while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://${url})" != "200" ]]; do
 
-        if $timeout -le 0 ; then
+        if [ "$timeout" -le "20" ]; then
             echo "Could not reach service: timeout"
             exit 1
         fi
 
-        printf '.'
-        sleep 5
-        timeout=$($timeout - 5)
+        printf '%s.' "${timeout}"
+        sleep 20;
+        timeout=$((timeout - 20))
+
     done
+    set -x
+}
+
+
+get_service_hostname(){
+
+    external_ip="";
+    while [ -z $external_ip ]; do
+        echo "Waiting for end point...";
+        external_ip=$(kubectl get svc ${APP_NAME}-service -o jsonpath="{.status.loadBalancer.ingress[*].hostname}");
+        [ -z "$external_ip" ] && sleep 10;
+    done;
+    echo "End point ready-" && echo $external_ip;
+    export service_hostname=$external_ip
 }
 
 main
