@@ -54,8 +54,9 @@ node{
                 stage("deploy"){
                     sh """
                     pwd
+                    ls -la
                     export APP_VERSION=7
-                    ./deployment_config/bg_deploy.sh
+                    bash ./deployment_config/bg_deploy.sh
                     """
                 }
             }
