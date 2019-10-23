@@ -1,28 +1,34 @@
 #!/bin/bash -xe
 
+APP_NAME="prayertimes"
+
 main(){
 
+    echo "====================Initial State================="
+    print_state
+
+
+    echo "===============Starting deployment================="
+
     # get deployed service role
-    DEPLOYED_ROLE=$(kubectl get services -l app=prayertimes -o jsonpath="{.items[*].spec.selector.role}")
+    DEPLOYED_ROLE=$(kubectl get services -l app=${APP_NAME} -o jsonpath="{.items[*].spec.selector.role}")
     export DEPLOYED_ROLE
 
     if [[ -z "$DEPLOYED_ROLE" ]]
     then
+
+        echo "*****: Initially no service for the app was deployed => deploying initial Blue deployment *****"
         # no service is deployed, deploy blue
         export TARGET_ROLE="blue"
         export APP_VERSION="${APP_VERSION}"
         envsubst < deployment_config/deployment.yml | kubectl apply -f -
-        kubectl rollout status deployment "prayertimes-deployment-${TARGET_ROLE}"
+        kubectl rollout status deployment "${APP_NAME}-deployment-${TARGET_ROLE}"
 
         envsubst < deployment_config/service.yml | kubectl apply -f -
 
-        # list running pods
-        printf "\nLisitng available pods and their nodes\n"
-        kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
+        print_state
 
-        printf "\n listing available services\n"
-        kubectl get svc -o wide
-        service_hostname=$(kubectl get svc prayertimes-service -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
+        service_hostname=$(kubectl get svc ${APP_NAME}-service -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
         curl -I "$service_hostname"
 
     else
@@ -39,44 +45,55 @@ main(){
             exit 1
         fi
 
-        # list running pods
-        printf "\nLisitng available pods and their nodes\n"
-        kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
+        print_state
 
         # deploy second role
         printf "\nDeploying role: %s" "${TARGET_ROLE}"
         envsubst < deployment_config/deployment.yml | kubectl apply -f -
 
         printf "\nWaiting for deployment to be done\n"
-        kubectl rollout status deployment "prayertimes-deployment-${TARGET_ROLE}"
+        kubectl rollout status deployment "${APP_NAME}-deployment-${TARGET_ROLE}"
 
-        printf "\nLisitng available pods and their nodes\n"
-        kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
+        print_state
 
-        # test with test_service
+        # TODO:test with test_service
 
         # if tests successful switch service to new deployment
         printf "\nSwitching service to new deployment\n"
         envsubst < deployment_config/service.yml | kubectl apply -f -
 
-        printf "\nlisting existing services\n"
-        kubectl get svc -l app=prayertimes -o wide
+        print_state
+
         printf "\nTesting the deployed service\n"
-        service_hostname=$(kubectl get svc prayertimes-service -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
-        curl -I "${service_hostname}m"
+        service_hostname=$(kubectl get svc ${APP_NAME}-service -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
+        curl -I "${service_hostname}"
 
 
         # delete old deployment
         printf "\nDelete old deployment\n"
-        kubectl delete deployment "prayertimes-deployment-${DEPLOYED_ROLE}"
+        kubectl delete deployment "${APP_NAME}-deployment-${DEPLOYED_ROLE}"
 
         sleep 3
-        # list running pods
-        printf "\nLisitng available pods and their nodes\n"
-        kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
 
+        print_state
     fi
 }
 
+
+print_state(){
+
+    echo "+++++++++++ BEGIN: Cluster State description +++++++++++++++"
+
+    printf "\nLisitng available deployments\n"
+    kubectl get deployments -o wide
+
+    printf "\nLisitng available services\n"
+    kubectl get services -o wide
+
+    printf "\nLisitng available pods and their nodes\n"
+    kubectl get pods --output=custom-columns=Name:.metadata.name,NodeName:.spec.nodeName
+
+    echo "+++++++++++ Cluster State description: END +++++++++++++++"
+}
 
 main
