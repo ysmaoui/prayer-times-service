@@ -20,6 +20,12 @@ main(){
         envsubst < deployment_config/deployment.yml | kubectl apply -f -
         kubectl rollout status deployment "${APP_NAME}-deployment-${TARGET_ROLE}"
 
+        printf "\nWaiting for Pods to be ready\n"
+
+        while [[ $(kubectl get pods -l app=${APP_NAME} -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]];
+        do echo "waiting for pod" && sleep 1;
+        done
+
         envsubst < deployment_config/service.yml | kubectl apply -f -
 
         print_state
@@ -42,8 +48,14 @@ main(){
         fi
 
         # deploy second role
-        printf "\nDeploying role: %s" "${TARGET_ROLE}"
+        printf "\nDeploying role: %s" "${TARGET_ROLE}\n"
         envsubst < deployment_config/deployment.yml | kubectl apply -f -
+
+        printf "\nWaiting for Pods to be ready\n"
+
+        while [[ $(kubectl get pods -l app=${APP_NAME} -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]];
+        do echo "waiting for pod" && sleep 1;
+        done
 
         printf "\nWaiting for deployment to be done\n"
         kubectl rollout status deployment "${APP_NAME}-deployment-${TARGET_ROLE}"
