@@ -5,13 +5,13 @@ metadata:
   namespace: kube-system
 data:
   mapRoles: |
-    - rolearn: 	<arn_of_instance_role_of_worker_nodes>
+    - rolearn: 	${WORKERS_INSTANCE_ROLE}
       username: system:node:{{EC2PrivateDNSName}}
       groups:
         - system:bootstrappers
         - system:nodes
-    - rolearn: <arn_of_jenkins_user_that_needs_to_control_the_cluster>
-      username: <jenkins_user_name>
+    - rolearn: ${JENKINS_USER_ARN}
+      username: ${JENKINS_USER}
       groups:
         - system:masters
 
